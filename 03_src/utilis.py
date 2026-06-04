@@ -18,6 +18,7 @@ from lightgbm import LGBMRegressor
 from tqdm import tqdm
 
 
+
 # ── Hilfsfunktion: Metriken ──────────────────────────────────────────────────
 
 def evaluate(y_true, y_pred, label=""):
@@ -247,3 +248,13 @@ def nf_to_polars(preds_pd, model_col, pred_col, ref_df):
         .join(ref_df.select(['store_nbr', 'date', TARGET_COL]).rename({TARGET_COL: 'y_true'}),
               on=['store_nbr', 'date'], how='left')
     )
+
+# ── 7 · Hilfsfunktionen ─────────────────────────────────────────────────────────────
+
+
+def mape(y_true, y_pred):
+    mask = y_true != 0
+    return np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
+
+def rmse(y_true, y_pred):
+    return np.sqrt(mean_squared_error(y_true, y_pred))

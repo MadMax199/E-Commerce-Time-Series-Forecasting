@@ -37,7 +37,7 @@ VAL_END   = pl.date(2017,  5, 31)   # Val:   2017-01-01 → 2017-05-31
                                      # Test:  2017-06-01 → 2017-08-15
 
 LOOKBACK = 336   # Kontextfenster in Tagen (~1 Jahr Wochenmuster)
-HORIZON  =  30   # Forecast-Horizont in Tagen
+HORIZON  =  76   # Forecast-Horizont in Tagen
 
 
 MODELL_ORDER  = ['SARIMAX', 'Prophet', 'XGBoost', 'LightGBM', 'PatchTST', 'NHITS']
