@@ -44,8 +44,8 @@ MODELL_ORDER  = ['SARIMAX', 'Prophet', 'XGBoost', 'LightGBM', 'PatchTST', 'NHITS
 FILE_NAMES = {
     'SARIMAX':  'sarimax',
     'Prophet':  'prophet',
-    'XGBoost':  'xgb',    
-    'LightGBM': 'lgbm',      
+    'XGBoost':  'xgboost',    
+    'LightGBM': 'lightgbm',      
     'PatchTST': 'patchtst',
     'NHITS':    'nhits',
 }
