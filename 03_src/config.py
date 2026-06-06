@@ -12,7 +12,6 @@ TARGET_COL = 'transactions'
 
 CAT_COLS = ['hol_type_national']
 
-# Alle numerischen Feature-Spalten (kein date, store_nbr, target)
 FEATURE_COLS = [
     'store_type_enc', 'cluster',
     'month', 'weekday', 'quarter',
@@ -36,11 +35,12 @@ TRAIN_END = pl.date(2016, 12, 31)   # Train: 2013-01-29 → 2016-12-31
 VAL_END   = pl.date(2017,  5, 31)   # Val:   2017-01-01 → 2017-05-31
                                      # Test:  2017-06-01 → 2017-08-15
 
-LOOKBACK = 336   # Kontextfenster in Tagen (~1 Jahr Wochenmuster)
-HORIZON  =  76   # Forecast-Horizont in Tagen
+LOOKBACK = 336  
+HORIZON  =  76  
 
 
 MODELL_ORDER  = ['SARIMAX', 'Prophet', 'XGBoost', 'LightGBM', 'PatchTST', 'NHITS']
+
 FILE_NAMES = {
     'SARIMAX':  'sarimax',
     'Prophet':  'prophet',
@@ -66,3 +66,41 @@ PRED_COLS = {
     'NHITS':    'pred_nhits',
 }
 
+XGB_PARAMS = {
+    'max_depth': 9,
+    'learning_rate': 0.05,
+    'random_state': 42,
+    'n_jobs': -1
+}
+
+LGBM_PARAMS = {
+    'max_depth': 9,
+    'learning_rate': 0.05,
+    'random_state': 42,
+    'verbose': -1,
+    'n_jobs': -1
+}
+
+PATCHTST_PARAMS = {
+    'patch_len': 14,
+    'stride': 4,
+    'learning_rate': 1e-4,
+    'encoder_layers': 2,
+    'n_heads': 8,
+    'hidden_size': 64,
+    'linear_hidden_size': 128,
+    'dropout': 0.2,
+    'fc_dropout': 0.2,
+    'scaler_type': 'standard',
+    'batch_size': 64,
+    'random_seed': 42}
+
+NHITS_PARAMS = {
+    'learning_rate': 0.001,
+    'batch_size': 64,
+    'pooling_widths': [2, 7, 14],  # Unser Fix für das Saisonalitäts-Feature
+    'scaler_type': 'standard',
+    'early_stop_patience_steps': 5,
+    'val_check_steps': 10,
+    'random_seed': 42
+}

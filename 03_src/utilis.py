@@ -14,7 +14,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from prophet import Prophet
 from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
+from lightgbm import LGBMRegressor, early_stopping
 from tqdm import tqdm
 
 
@@ -31,7 +31,7 @@ def evaluate(y_true, y_pred, label=""):
 
 
 
-# ── 1 · SARIMAX (KORRIGIERTE VERSION) ──────────────────────────────────────────
+# ── 1 · SARIMAX──────────────────────────────────────────
 def run_sarimax(train_df, val_df, stores, exog_cols=EXOG_COLS):
     all_preds = []
 
@@ -152,50 +152,71 @@ def run_prophet(train_df, val_df, stores, extra_regressors=None):
 
 # ── 3 · XGBoost ──────────────────────────────────────────────────────────────
 
-def run_xgb(X_train, y_train, X_val, y_val):
+def run_xgb(X_train, y_train, X_val, y_val, **kwargs):
     """
-    Trainiert XGBoost und gibt (model, mae_val) zurück.
+    Trainiert XGBoost mit flexiblen Hyperparametern und gibt (model, metrics) zurück.
     """
-    model = XGBRegressor(
-        n_estimators=500,
-        learning_rate=0.05,
-        max_depth=6,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        early_stopping_rounds=30,
-        n_jobs=-1,
-        random_state=42,
-    )
+    # Standardwerte definieren
+    params = {
+        'n_estimators': 500,
+        'learning_rate': 0.05,
+        'max_depth': 6,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'early_stopping_rounds': 30,
+        'n_jobs': -1,
+        'random_state': 42
+    }
+    
+    params.update(kwargs)
+    
+    model = XGBRegressor(**params)
+    
+    # Fit ausführen
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
         verbose=False,
     )
+    
     preds = model.predict(X_val)
+    
+    # Nutzt deine originale Auswertungsmethode
     return model, evaluate(y_val, preds, label="XGBoost Val")
-
 
 # ── 4 · LightGBM ─────────────────────────────────────────────────────────────
 
-def run_lgbm(X_train, y_train, X_val, y_val):
+def run_lgbm(X_train, y_train, X_val, y_val, **kwargs):
     """
-    Trainiert LightGBM und gibt (model, mae_val) zurück.
+    Trainiert LightGBM mit flexiblen Hyperparametern und aktiviertem Early Stopping.
+    Gibt (model, metrics) zurück.
     """
-    model = LGBMRegressor(
-        n_estimators=500,
-        learning_rate=0.05,
-        max_depth=6,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        n_jobs=-1,
-        random_state=42,
-        verbose=-1,
-    )
+    # Standardwerte definieren
+    params = {
+        'n_estimators': 500,
+        'learning_rate': 0.05,
+        'max_depth': 6,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'n_jobs': -1,
+        'random_state': 42,
+        'verbose': -1
+    }
+    
+    # Parameter mit den Tuning-Werten überschreiben
+    params.update(kwargs)
+    
+    model = LGBMRegressor(**params)
+    
+    # Aktiviert Early Stopping nach 30 Runden ohne Verbesserung
+    callbacks = [early_stopping(stopping_rounds=30, verbose=False)]
+    
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
-        callbacks=[],
+        callbacks=callbacks
     )
+    
     preds = model.predict(X_val)
     return model, evaluate(y_val, preds, label="LightGBM Val")
 
