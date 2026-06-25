@@ -1,46 +1,406 @@
 # Favorita Store Sales Forecasting: Multi-Model Pipeline
 
-Dieses Projekt befasst sich mit der Vorhersage von Verkaufszahlen für die ecuadorianische Supermarktkette **Favorita**. Die zentrale Herausforderung liegt in der Verarbeitung von volatilen Zeitreihen, die stark von externen Faktoren wie Feiertagen, Ölpreisen und lokalen Events beeinflusst werden.
+Dieses Projekt beschäftigt sich mit der Vorhersage von Verkaufszahlen für die ecuadorianische Supermarktkette **Favorita**. Ziel ist es, die täglichen Transaktionen einzelner Stores mithilfe verschiedener Machine-Learning- und Deep-Learning-Modelle vorherzusagen.
 
-## 🛠 Methodik & Umsetzung
+Die zentrale Herausforderung besteht in der Modellierung komplexer Zeitreihen, die durch zahlreiche externe Faktoren beeinflusst werden. Dazu gehören unter anderem Feiertage, lokale Events, saisonale Muster, Wochentagseffekte sowie makroökonomische Faktoren wie der Ölpreis.
 
-Anstatt auf ein einzelnes Modell zu setzen, wurde eine skalierbare **Vergleichs-Pipeline** entwickelt, die verschiedene mathematische Ansätze evaluiert:
+Statt ein einzelnes Modell zu verwenden, wurde eine skalierbare **Multi-Model-Forecasting-Pipeline** entwickelt, die unterschiedliche Modellklassen systematisch vergleicht und hinsichtlich ihrer Prognosefähigkeit evaluiert.
 
-### 1. Daten-Architektur & Performance
-* **High-Speed Processing:** Konsequenter Einsatz von **Polars** für das Data Wrangling, um eine extrem speichereffiziente und multi-threaded Verarbeitung zu gewährleisten.
-* **Storage:** Nutzung des **Parquet-Formats** zur optimierten, komprimierten Speicherung und schnellen Bereitstellung der Trainings- und Validierungsdaten.
-* **Modularität:** Strikte Trennung der Kern-Logik (`03_src/`) von der interaktiven Analyse (`04_notebooks/`), um die Wiederverwendbarkeit und Wartbarkeit des Codes zu sichern.
+---
 
-### 2. Multivariate Feature Engineering
-Die Zeitreihen wurden um kontextbezogene Dimensionen erweitert, um den Modellen tieferes Wissen über die Marktgegebenheiten zu vermitteln:
-* **Ökonomische Indikatoren:** Integration des täglichen Ölpreises als Proxy für die gesamtwirtschaftliche Kaufkraft Ecuadors.
-* **Kalendarische Ereignisse:** Mapping von nationalen und lokalen Feiertagen inklusive "Pre- & Post-Holiday"-Fenstern, um verändertes Kundenverhalten vor und nach freien Tagen einzufangen.
-* **Zeitreihen-Dynamik:** Generierung von rollierenden Statistiken (Rolling Means über 7, 14, 28 Tage) und komplexen Zeit-Lags, um saisonale Trends (Wochentage, Monatsenden) explizit abzubilden.
+# 🛠 Methodik & Umsetzung
 
-### 3. Evaluierungs-Framework & Zweistufiger Workflow
-Das Projekt folgt einem strikten, chronologischen Validierungsprozess ohne Daten-Leckage (*Data Leakage*), aufgeteilt in zwei aufeinander aufbauende Phasen:
+## 1. Daten-Architektur & Performance
 
-* **Phase 1: Validierung (`04_model_training.ipynb`)** Modelle werden ausschließlich auf historischen Daten (2013–2016) trainiert und gegen ein isoliertes Validierungsfenster (Januar–Mai 2017) getestet. Diese Phase dient dem Benchmark der Modellarchitekturen und dem Tuning der Hyperparameter (z. B. `LOOKBACK = 336`, `HORIZON = 76`).
-* **Phase 2: Finaler Test (`05_model_test.ipynb`)** Die Validierungsdaten werden in den Trainingsprozess integriert (`train_val`), um den Modellen die jüngste und wertvollste Historie bereitzustellen. Alle Modelle werden mit den fixierten Parametern re-trainiert und absolvieren auf dem blockierten Test-Zeitraum (Juni–August 2017) den finalen Härtetest.
+Die Datenverarbeitung wurde auf eine effiziente und skalierbare Struktur ausgelegt:
 
-Drei Modell-Generationen treten hierbei gegeneinander an:
-* **Gradient Boosted Trees (XGBoost, LightGBM):** Globale, featurebasierte Modelle, optimiert auf einer 2D-Feature-Matrix.
-* **Deep Learning (PatchTST, NHITS):** Sequenzbasierte neuronale Netze via `neuralforecast`, die komplexe multivariate Abhängigkeiten über Zeitfenster (*Patches*) hinweg lernen.
-* **Statistische Modelle (Prophet, SARIMAX):** Lokale, pro Store isoliert trainierte Modelle, die als starke statistische Baseline dienen.
+* **High-Speed Processing:** Konsequenter Einsatz von **Polars** für Data Wrangling und Feature Engineering, um eine speichereffiziente und parallele Verarbeitung großer Zeitreihen zu ermöglichen.
+* **Storage:** Verwendung des **Parquet-Formats** für komprimierte Speicherung und schnellen Zugriff auf Trainings-, Validierungs- und Testdaten.
+* **Modularität:** Trennung der Kernlogik (`03_src/`) von Analyse- und Trainingsnotebooks (`04_notebooks/`), wodurch Wartbarkeit und Wiederverwendbarkeit verbessert werden.
+* **Konfiguration:** Zentrale Verwaltung von Modellparametern und Pfaden über Konfigurationsdateien.
 
-### 4. Zentrale Ergebnisse & wissenschaftliche Erkenntnisse
+---
+
+# 2. Multivariates Feature Engineering
+
+Um den Modellen zusätzliche Informationen über zeitliche Muster und externe Einflussfaktoren bereitzustellen, wurden umfangreiche Features erzeugt.
+
+## Zeitbasierte Features
+
+* Wochentag
+* Monat
+* Jahr
+* Kalenderwoche
+* Feiertagsindikatoren
+* Pre- und Post-Holiday-Fenster
+* Saisonale Muster
+
+Diese Features ermöglichen es den Modellen, wiederkehrende Nachfragezyklen und besondere Ereignisse abzubilden.
+
+## Historische Zeitreihen-Features
+
+Zur Modellierung von Dynamiken innerhalb der Verkaufszeitreihen wurden erzeugt:
+
+* **Rolling Means**
+  * 7 Tage
+  * 14 Tage
+  * 28 Tage
+
+* **Lag Features**
+  * vergangene Transaktionswerte
+  * saisonale Verzögerungen
+  * historische Vergleichszeiträume
+
+* **Momentum Features**
+  * Wachstumsraten
+  * Veränderung gegenüber vergangenen Perioden
+
+* **Difference Features**
+  * absolute Differenzen zu historischen Referenzen
+
+* **Ratio Features**
+  * Verhältnis aktueller Werte zu historischen Benchmarks
+
+## Externe Einflussfaktoren
+
+Zusätzlich wurden externe Variablen integriert:
+
+* täglicher Ölpreis als wirtschaftlicher Indikator
+* nationale und regionale Feiertage
+* lokale Events
+
+---
+
+# 3. Modellvergleich & Forecasting-Ansätze
+
+Die Pipeline vergleicht drei unterschiedliche Modellfamilien.
+
+## Gradient Boosted Trees
+
+### XGBoost & LightGBM
+
+Diese Modelle arbeiten auf einer klassischen Feature-Matrix und lernen nichtlineare Zusammenhänge zwischen Eingangsvariablen und Verkaufszahlen.
+
+Vorteile:
+
+* hohe Performance bei tabellarischen Daten
+* robuste Verarbeitung vieler Features
+* gute Interpretierbarkeit durch Feature Importance
+
+---
+
+## Deep Learning Modelle
+
+### PatchTST & NHITS
+
+Die neuronalen Modelle werden über `neuralforecast` trainiert und verarbeiten historische Sequenzen direkt.
+
+Eigenschaften:
+
+* Modellierung langfristiger zeitlicher Abhängigkeiten
+* Erkennung komplexer saisonaler Muster
+* Verarbeitung multivariater Zeitreihen
+
+PatchTST verwendet sogenannte **Patches**, um lange Sequenzen effizienter durch Self-Attention-Mechanismen zu verarbeiten.
+
+---
+
+## Statistische Modelle
+
+### Prophet & SARIMAX
+
+Diese Modelle dienen als klassische Baselines.
+
+Sie modellieren:
+
+* Trends
+* saisonale Komponenten
+* wiederkehrende Muster
+
+Ihre Vorteile liegen insbesondere in der Interpretierbarkeit und einfachen Modellierung einzelner Zeitreihen.
+
+---
+
+# 4. Evaluierungs-Framework
+
+Um realistische Prognoseszenarien abzubilden, wurde eine strikt chronologische Validierungsstrategie ohne Data Leakage verwendet.
+
+## Phase 1: Modellvalidierung
+
+Notebook:
+
+```
+04_notebooks/04_model_training.ipynb
+```
+
+Training:
+
+```
+2013 - 2016
+```
+
+Validierung:
+
+```
+Januar 2017 - Mai 2017
+```
+
+Ziele:
+
+* Vergleich der Modellarchitekturen
+* Hyperparameter-Tuning
+* Auswahl geeigneter Modellkonfigurationen
+
+Beispielparameter:
+
+```
+LOOKBACK = 336
+HORIZON = 76
+```
+
+---
+
+## Phase 2: Finaler Test
+
+Notebook:
+
+```
+04_notebooks/05_model_test.ipynb
+```
+
+Nach Auswahl der besten Konfigurationen werden die Modelle erneut trainiert.
+
+Training:
+
+```
+2013 - Mai 2017
+```
+
+Finaler Test:
+
+```
+Juni 2017 - August 2017
+```
+
+Dieser Zeitraum bleibt vollständig isoliert und dient als realistische Simulation zukünftiger Prognosen.
+
+---
+
+# 5. Zentrale Ergebnisse & wissenschaftliche Erkenntnisse
+
+Die Untersuchung zeigt, dass die Modellleistung stark von der Kombination aus geeigneten Features, Validierungsstrategie und Modellarchitektur abhängt.
+
+Die wichtigsten Erkenntnisse:
+
+* **Feature Engineering ist ein zentraler Erfolgsfaktor:**  
+  Kalenderinformationen, Feiertage, Rolling Statistics und historische Benchmarks ermöglichen eine bessere Erfassung saisonaler und kurzfristiger Veränderungen.
+
+* **Tree-basierte Modelle profitieren besonders von strukturierten Features:**  
+  XGBoost und LightGBM können komplexe Zusammenhänge zwischen externen Faktoren und Verkaufszahlen effektiv nutzen.
+
+* **Deep-Learning-Modelle erfassen langfristige Muster:**  
+  PatchTST und NHITS eignen sich besonders für komplexe Sequenzen mit mehreren saisonalen Komponenten.
+
+* **Statistische Modelle liefern wichtige Baselines:**  
+  Prophet und SARIMAX ermöglichen eine transparente Modellierung von Trend und Saisonalität.
+
+* **Zeitbasierte Evaluation verhindert unrealistische Ergebnisse:**  
+  Durch die chronologische Aufteilung wird verhindert, dass Informationen aus zukünftigen Zeitpunkten in das Training gelangen.
+
+Die entwickelte Pipeline ermöglicht dadurch einen reproduzierbaren Vergleich verschiedener Forecasting-Ansätze für komplexe Retail-Zeitreihen.
+
+---
+
+# ⚙️ Installation & Environment Setup
+
+## Voraussetzungen
+
+Empfohlen:
+
+* Python >= 3.10
+* Git
+* virtuelle Python-Umgebung (`venv` oder `conda`)
+
+---
+
+## Repository klonen
+
+```bash
+git clone <repository-url>
+
+cd Favorita-Store-Sales-Forecasting
+```
+
+---
+
+## Virtuelle Umgebung erstellen
+
+### Mit venv
+
+Linux / macOS:
+
+```bash
+python3 -m venv .venv
+
+source .venv/bin/activate
+```
+
+Windows:
+
+```bash
+python -m venv .venv
+
+.venv\Scripts\activate
+```
+
+---
+
+## Abhängigkeiten installieren
+
+```bash
+pip install --upgrade pip
+
+pip install -r requirements.txt
+```
+
+---
+
+## Jupyter Kernel registrieren
+
+Damit die Notebooks die virtuelle Umgebung verwenden:
+
+```bash
+python -m ipykernel install \
+--user \
+--name favorita_forecasting \
+--display-name "Favorita Forecasting"
+```
+
+Anschließend im Notebook auswählen:
+
+```
+Kernel → Change Kernel → Favorita Forecasting
+```
+
+---
+
+# ▶️ Ausführung der Pipeline
+
+Die Pipeline wird schrittweise ausgeführt:
+
+## 1. Allgemeiner Überblick
+
+```
+04_notebooks/01_data_check.ipynb
+```
+Enthält:
+
+* Allgemeinen Überblick
+
+## 2. Explorative Analyse
 
 
-## 📂 Repository-Struktur
+```
+04_notebooks/02_eda.ipynb
+```
 
-```text
-├── 01_business_understanding/  # Projektdefinition und Zielsetzung
-├── 02_data/                    # Strukturierte Ablage (Raw, Final, Results)
-├── 03_src/                     # Kern-Logik (Features, Utilities, Config)
-├── 04_notebooks/               # Workflow von EDA bis Evaluierung
-│   ├── 01_eda.ipynb            # Explorative Datenanalyse & Saisonalitäten
-│   ├── 02_preprocessing.ipynb  # Polars Feature Engineering & Parquet Export
-│   ├── 04_model_training.ipynb # Phase 1: Training & Validierungs-Benchmark
-│   └── 05_model_test.ipynb     # Phase 2: Re-Run auf Train+Val & Hypothesen-Analyse
-├── requirements_clean.txt      # Projekt-Abhängigkeiten
-└── README.md                   # Projektdokumentation
+Enthält:
+
+* Datenverständnis
+* Analyse von Trends und Saisonalitäten
+* Untersuchung externer Einflussfaktoren
+
+---
+
+## 3. Preprocessing & Feature Engineering
+
+```
+04_notebooks/03_feature_engineering.ipynb
+```
+
+Enthält:
+
+* Datenbereinigung
+* Feature-Erstellung
+* Aggregationen
+* Export als Parquet-Dateien
+
+---
+
+## 4. Modelltraining
+
+```
+04_notebooks/04_model_training.ipynb
+```
+
+Enthält:
+
+* Training aller Modellklassen
+* Validierung
+* Modellvergleich
+
+---
+
+## 5. Finaler Test
+
+```
+04_notebooks/05_model_test.ipynb
+```
+
+Enthält:
+
+* Retraining mit erweiterten Trainingsdaten
+* finale Evaluation
+* Analyse der Prognosequalität
+
+---
+
+## 6. Hyptohesen Test
+
+```
+04_notebooks/06_hypothesen_analyse.ipynb
+```
+
+Enthält:
+
+* Alle zugehörigen Analysen zu den Hyptohesen
+
+---
+
+# 📂 Repository-Struktur
+
+```
+├── 01_business_understanding/
+│   └── Projektdefinition und Zielsetzung
+
+├── 02_data/
+│   ├── raw/
+│   ├── processed/
+│   └── final/
+
+├── 03_src/
+│   ├── Config
+│   ├── Utility Functions
+│   ├── Feature Engineering
+
+├── 04_notebooks/
+│   ├── 01_data_check.ipynb
+│   ├── 02_eda.ipynb
+│   ├── 03_feature_engineering.ipynb
+│   ├── 04_model_training.ipynb
+│   └── 05_model_test.ipynb
+│   └── 06_hypothesen_analyse.ipynb
+
+
+├── requirements_clean.txt
+
+└── README.md
+```
+
+---
+
+# 📌 Reproduzierbarkeit
+
+Alle Experimente können durch die dokumentierte Environment-Konfiguration und die chronologische Trainingsstrategie reproduziert werden.
+
+Die Pipeline ist modular aufgebaut und kann einfach um weitere Modelle, Features oder externe Einflussfaktoren erweitert werden.

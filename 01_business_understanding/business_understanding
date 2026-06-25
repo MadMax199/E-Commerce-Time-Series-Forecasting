@@ -1,0 +1,6 @@
+
+Die ecuadorianische Supermarktkette Favorita steht vor der Herausforderung, zukünftige Verkaufszahlen möglichst präzise vorherzusagen, um eine effiziente Planung von Lagerbeständen, Personal und Lieferketten zu ermöglichen. Fehlprognosen führen entweder zu Überbeständen und erhöhten Kosten oder zu Out-of-Stock-Situationen und Umsatzverlusten.
+
+Ziel dieses Projekts ist es daher, ein robustes Forecasting-System zu entwickeln, das tägliche Transaktionen auf Store-Ebene zuverlässig prognostiziert. Dabei müssen sowohl interne Faktoren (historische Verkaufsdaten, Store-Spezifika) als auch externe Einflüsse wie Feiertage, saisonale Muster und makroökonomische Variablen berücksichtigt werden.
+
+Durch den Einsatz verschiedener Modellklassen soll nicht nur eine möglichst hohe Prognosegenauigkeit erreicht, sondern auch ein fundiertes Verständnis der zugrunde liegenden Treiber der Nachfrage gewonnen werden.
