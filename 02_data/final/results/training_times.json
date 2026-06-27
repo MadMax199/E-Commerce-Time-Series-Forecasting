@@ -1,8 +1,8 @@
 {
-  "SARIMAX": 224.6,
-  "Prophet": 26.7,
-  "XGBoost": 65.4,
-  "LightGBM": 26.4,
-  "PatchTST": 6627.8,
-  "NHITS": 6593.6
+  "SARIMAX": 255.9,
+  "Prophet": 23.1,
+  "XGBoost": 57.1,
+  "LightGBM": 35.9,
+  "PatchTST": 3304.6,
+  "NHITS": 691.5
 }
